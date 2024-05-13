@@ -35,8 +35,8 @@ Parameters:
         Average latency lower limit; only output IPs with average latency higher than the specified limit; (default 0 ms)
     -tlr 0.2
         Packet loss rate upper limit; only output IPs with packet loss rate lower than or equal to the specified rate, range 0.00~1.00, 0 filters out any IPs with packet loss; (default 1.00)
-    -p 10
-        Number of results to display; directly display the specified number of results after testing, 0 means not displaying results and exiting directly; (default 10)
+    -p 20
+        Number of results to display; directly display the specified number of results after testing, 0 means not displaying results and exiting directly; (default 20)
     -f ip.txt
         IP segment data file; add quotes if the path contains spaces;
     -ip 1.1.1.1,2.2.2.2/24,2606:4700::/32
@@ -65,11 +65,10 @@ Parameters:
 	flag.IntVar(&maxDelay, "tl", 300, "Average latency upper limit")
 	flag.IntVar(&minDelay, "tll", 0, "Average latency lower limit")
 	flag.Float64Var(&maxLossRate, "tlr", 1, "Packet loss rate upper limit")
-
 	flag.BoolVar(&task.ScanAllPort, "full", false, "Scan all ports")
 	flag.BoolVar(&task.QuickMode, "q", true, "Quick mode, test results for randomly scanning 1000 IPs")
 	flag.BoolVar(&task.IPv6Mode, "ipv6", false, "IPv6 support. Only effect when not provide extra ip cidr.")
-	flag.IntVar(&utils.PrintNum, "p", 10, "Number of results to display")
+	flag.IntVar(&utils.PrintNum, "p", 20, "Number of results to display")
 	flag.StringVar(&task.IPFile, "f", "", "IP segment data file")
 	flag.StringVar(&task.IPText, "ip", "", "Specify IP segment data")
 	flag.StringVar(&utils.Output, "o", "result.csv", "Output result file")
@@ -98,6 +97,8 @@ func main() {
 	fmt.Printf("CloudflareWarpSpeedTest\n\n")
 
 	pingData := task.NewWarping().Run().FilterDelay().FilterLossRate()
-	utils.ExportCsv(pingData)
-	pingData.Print()
+	// utils.ExportCsv(pingData)
+	utils.ExportAddresses(pingData)
+	// ExportAddresses
+	// pingData.Print()
 }
