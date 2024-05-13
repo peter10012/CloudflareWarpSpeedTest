@@ -7,9 +7,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/blake2s"
-	"golang.org/x/crypto/poly1305"
-	"golang.zx2c4.com/wireguard/tai64n"
 	"log"
 	"math/rand"
 	"net"
@@ -18,6 +15,10 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/blake2s"
+	"golang.org/x/crypto/poly1305"
+	"golang.zx2c4.com/wireguard/tai64n"
 
 	"github.com/peanut996/CloudflareWarpSpeedTest/utils"
 
@@ -31,7 +32,7 @@ const (
 	defaultPingTimes            = 10
 	udpConnectTimeout           = time.Millisecond * 1000
 	wireguardHandshakeRespBytes = 92
-	quickModeMaxIpNum           = 1000
+	quickModeMaxIpNum           = 5000
 	warpPublicKey               = "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo="
 )
 
