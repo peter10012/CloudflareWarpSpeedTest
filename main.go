@@ -97,7 +97,7 @@ func main() {
 	fmt.Printf("CloudflareWarpSpeedTest\n\n")
 
 	pingData := task.NewWarping().Run().FilterDelay().FilterLossRate()
-	// utils.ExportCsv(pingData)
+	utils.ExportCsv(pingData)
 	utils.ExportAddresses(pingData)
 	// ExportAddresses
 	// pingData.Print()
