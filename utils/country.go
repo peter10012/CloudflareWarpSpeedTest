@@ -83,7 +83,10 @@ func GetCountryBatch(ips ...string) (country_map map[string]string, err error) {
 			continue
 		}
 
-		resp, _ := http.Post(url, "text/plain;charset=UTF-8", bytes.NewBuffer(data))
+		resp, err := http.Post(url, "text/plain;charset=UTF-8", bytes.NewBuffer(data))
+		if nil != err {
+			continue
+		}
 		body, err := io.ReadAll(resp.Body)
 		if nil != err {
 			continue
