@@ -100,5 +100,5 @@ func main() {
 	utils.ExportCsv(pingData)
 	utils.ExportAddresses(pingData)
 	// ExportAddresses
-	// pingData.Print()
+	pingData.Print()
 }
