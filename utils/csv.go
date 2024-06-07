@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	// "github.com/peanut996/CloudflareWarpSpeedTest/task"
 )
@@ -27,6 +28,11 @@ var (
 	PrintNum         = 10
 )
 
+var (
+	IPCountryMap map[string]string
+	wg           = &sync.WaitGroup{}
+)
+
 func NoPrintResult() bool {
 	return PrintNum == 0
 }
@@ -40,22 +46,26 @@ type PingData struct {
 	Sended   int
 	Received int
 	Delay    time.Duration
+	Country  string
 }
 
 type CloudflareIPData struct {
 	*PingData
 	lossRate float32
-	country  string
 }
 
 func (cf *CloudflareIPData) getCountry() string {
-	country, err := GetCountry(cf.IP.IP.String())
+	ip := cf.IP.IP.String()
+	if cf.Country != "" {
+		return cf.Country
+	}
+
+	cn, err := GetCountry(ip)
 	if err != nil {
 		log.Fatal(err)
-		return ""
 	}
-	cf.country = country
-	return country
+	cf.Country = cn
+	return cn
 }
 
 func (cf *CloudflareIPData) getLossRate() float32 {
@@ -71,7 +81,8 @@ func (cf *CloudflareIPData) toString() []string {
 	result[0] = cf.IP.String()
 	result[1] = strconv.FormatFloat(float64(cf.getLossRate())*100, 'f', 0, 32) + "%"
 	result[2] = strconv.FormatFloat(cf.Delay.Seconds()*1000, 'f', 2, 32)
-	result = append(result, "")
+	result = append(result, cf.Country)
+	// result = append(result, "")
 	// result = append(result, cf.getCountry())
 	return result
 }
@@ -89,6 +100,7 @@ func ExportCsv(data []CloudflareIPData) {
 	w := csv.NewWriter(fp)
 	_ = w.Write([]string{"IP:Port", "Loss", "Latency", "Country"})
 	_ = w.WriteAll(convertToString(data))
+
 	w.Flush()
 }
 
@@ -106,15 +118,25 @@ func ExportAddresses(data []CloudflareIPData) {
 
 	size := len(data)
 
-	log.Println(convertToString(data))
-	for _, _data := range data[0:min(PrintNum, size)] {
-		ip := _data.IP.IP.String()
-		country := _data.getCountry()
-		record := fmt.Sprintf("%s:%d#%s", ip, 2052, country)
-		w.Write([]string{record})
-	}
+	// log.Println(convertToString(data))
+	cached_ips := map[string]bool{}
+	count := 0
+	for idx, d := range data {
+		fmt.Printf("idx: %d, size: %d\n", idx, size)
+		if count == PrintNum {
+			break
+		}
 
-	// _ = w.WriteAll(convertToString(data[0:count]))
+		ip := d.IP.IP.String()
+		if cached_ips[ip] == false {
+			cached_ips[ip] = true
+			record := fmt.Sprintf("%s:%d#%s", ip, 2052, d.getCountry())
+			w.Write([]string{record})
+			count++
+		} else {
+			fmt.Printf("already record %s \n", ip)
+		}
+	}
 	w.Flush()
 }
 
@@ -174,13 +196,34 @@ func (s PingDelaySet) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-func (s PingDelaySet) FetchCountries() (map[string]string, error) {
-	ips := []string{}
+func handler(delay CloudflareIPData, ch <-chan string) {
+	ip := <-ch
+	defer wg.Done()
+	if IPCountryMap[ip] != "" {
+		delay.Country = IPCountryMap[ip]
+	} else {
+		cn, err := GetCountry(ip)
+		if nil != err {
+			fmt.Errorf(err.Error())
+		}
+		delay.Country = cn
+	}
+}
+
+func (s PingDelaySet) FetchCountries() {
+	ch := make(chan string, 3)
+	cached_ip := map[string]bool{}
 	for _, delay := range s {
-		ips = append(ips, delay.IP.IP.String())
+		ip := delay.IP.IP.String()
+		if cached_ip[ip] == true {
+			continue
+		}
+		ch <- ip
+		wg.Add(1)
+		go handler(delay, ch)
 	}
 
-	return GetCountryBatch(ips...)
+	wg.Wait()
 }
 
 func (s PingDelaySet) Print() {
@@ -191,8 +234,7 @@ func (s PingDelaySet) Print() {
 		fmt.Println("\n[Info] The total number of IP addresses in the complete speed test results is 0, so skipping the output.")
 		return
 	}
-
-	country_map, _ := s.FetchCountries()
+	s.FetchCountries()
 	// log.Println(country_map)
 	dataString := convertToString(s)
 	if len(dataString) < PrintNum {
@@ -207,11 +249,23 @@ func (s PingDelaySet) Print() {
 		}
 	}
 	fmt.Printf(headFormat, "IP:Port", "Loss", "Latency", "Country")
-	for i := 0; i < PrintNum; i++ {
-		ip := strings.Split(dataString[i][0], ":")[0]
-		country := country_map[ip]
-		fmt.Printf(dataFormat, dataString[i][0], dataString[i][1], dataString[i][2], country)
-		// fmt.Printf(dataFormat, dataString[i][0], dataString[i][1], dataString[i][2], dataString[i][3])
+
+	// cached := map[string]bool{}
+	for i, idx := 0, 0; ; {
+		if i == PrintNum {
+			break
+		}
+
+		ip := strings.Split(dataString[idx][0], ":")[0]
+		country := s[idx].Country
+		cached := map[string]bool{}
+		if !cached[ip] {
+			cached[ip] = true
+			fmt.Printf(dataFormat, dataString[idx][0], dataString[idx][1], dataString[idx][2], country)
+			i += 1
+		}
+
+		idx += 1
 	}
 	if !noOutput() {
 		fmt.Printf("\nComplete speed test results have been written to the %v file.\n", Output)
