@@ -16,6 +16,7 @@ var (
 
 func init() {
 	var printVersion bool
+	var exportWireguardZip bool
 	var help = `
 CloudflareWarpSpeedTest ` + Version + `
 Test the latency and speed of all Cloudflare Warp IPs to obtain the lowest latency and port.
@@ -53,8 +54,10 @@ Parameters:
         Test all ports; test all ports for each IP in the IP segment
     -h
         Print the help explanation
-    -v 
+    -v
         Print the version
+    -Z
+    	Export zip which wireguard can import
 `
 
 	var minDelay, maxDelay int
@@ -76,6 +79,7 @@ Parameters:
 	flag.StringVar(&task.PrivateKey, "pub", "", "Specify public key")
 	flag.StringVar(&task.ReservedString, "reserved", "", "Add custom reserved field")
 	flag.BoolVar(&printVersion, "v", false, "Print program version")
+	flag.BoolVar(&utils.WithExportWireguardZip, "Z", true, "Export to Wiregurad Zip file")
 
 	flag.Usage = func() { fmt.Print(help) }
 	flag.Parse()
@@ -97,8 +101,11 @@ func main() {
 	fmt.Printf("CloudflareWarpSpeedTest\n\n")
 
 	pingData := task.NewWarping().Run().FilterDelay().FilterLossRate()
-	utils.ExportCsv(pingData)
+	// utils.ExportCsv(pingData)
 	utils.ExportAddresses(pingData)
+	if utils.WithExportWireguardZip {
+		utils.ExportWireguardZip(pingData)
+	}
 	// ExportAddresses
 	pingData.Print()
 }
