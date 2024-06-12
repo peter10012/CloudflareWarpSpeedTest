@@ -16,7 +16,6 @@ var (
 
 func init() {
 	var printVersion bool
-	var exportWireguardZip bool
 	var help = `
 CloudflareWarpSpeedTest ` + Version + `
 Test the latency and speed of all Cloudflare Warp IPs to obtain the lowest latency and port.

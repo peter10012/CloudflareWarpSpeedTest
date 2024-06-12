@@ -4,9 +4,12 @@ go 1.21
 
 require (
 	github.com/cheggaaa/pb/v3 v3.1.4
+	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.23.0
+	golang.org/x/net v0.25.0
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
 	gopkg.in/ini.v1 v1.67.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
@@ -18,7 +21,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
