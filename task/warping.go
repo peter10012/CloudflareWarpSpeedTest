@@ -14,10 +14,14 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	"golang.org/x/crypto/blake2s"
 	"golang.org/x/crypto/poly1305"
+	"golang.org/x/net/ipv4"
+	"golang.org/x/net/ipv6"
+
 	"golang.zx2c4.com/wireguard/tai64n"
 
 	"github.com/peanut996/CloudflareWarpSpeedTest/utils"
@@ -30,7 +34,7 @@ import (
 const (
 	defaultRoutines             = 200
 	defaultPingTimes            = 10
-	udpConnectTimeout           = time.Millisecond * 1000
+	udpConnectTimeout           = time.Millisecond * 3000
 	wireguardHandshakeRespBytes = 92
 	quickModeMaxIpNum           = 5000
 	warpPublicKey               = "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo="
@@ -80,7 +84,8 @@ var (
 
 	MaxWarpPortRange = 10000
 
-	warpHandshakePacket, _ = hex.DecodeString("013cbdafb4135cac96a29484d7a0175ab152dd3e59be35049beadf758b8d48af14ca65f25a168934746fe8bc8867b1c17113d71c0fac5c141ef9f35783ffa5357c9871f4a006662b83ad71245a862495376a5fe3b4f2e1f06974d748416670e5f9b086297f652e6dfbf742fbfc63c3d8aeb175a3e9b7582fbc67c77577e4c0b32b05f92900000000000000000000000000000000")
+	// warpHandshakePacket, _ = hex.DecodeString("013cbdafb4135cac96a29484d7a0175ab152dd3e59be35049beadf758b8d48af14ca65f25a168934746fe8bc8867b1c17113d71c0fac5c141ef9f35783ffa5357c9871f4a006662b83ad71245a862495376a5fe3b4f2e1f06974d748416670e5f9b086297f652e6dfbf742fbfc63c3d8aeb175a3e9b7582fbc67c77577e4c0b32b05f92900000000000000000000000000000000")
+	warpHandshakePacket, _ = hex.DecodeString("045c844e63c611398d6aa38445cb173ee1aba9e058d7bad1f8e73638a0e014922d000000000000000000000000717c52cd5f928d1cc516171ec927f076")
 )
 
 type MessageInitiation struct {
@@ -246,7 +251,16 @@ func (w *Warping) warping(ip *UDPAddr) (received int, totalDelay time.Duration) 
 
 func handshake(conn net.Conn) (bool, time.Duration) {
 	startTime := time.Now()
-	_, err := conn.Write(warpHandshakePacket)
+	// _, err := conn.Write([]byte("hello"))
+	var err any
+	if IPv6Mode {
+		c := ipv6.NewConn(conn)
+		err = c.SendMsg(&ipv6.Message{Buffers: [][]byte{warpHandshakePacket}}, syscall.MSG_CTRUNC)
+	} else {
+		c := ipv4.NewConn(conn)
+		err = c.SendMsg(&ipv4.Message{Buffers: [][]byte{warpHandshakePacket}}, syscall.MSG_CTRUNC)
+	}
+
 	if err != nil {
 		return false, 0
 	}
