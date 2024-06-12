@@ -14,10 +14,12 @@ import (
 var (
 	IPText string
 	IPFile string
+	randor = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
 func InitRandSeed() {
-	rand.Seed(time.Now().UnixNano())
+	// rand.Seed(time.Now().UnixNano())
+	// New(NewSource(seed))
 }
 
 func isIPv4(ip string) bool {
@@ -28,7 +30,8 @@ func randIPEndWith(num byte) byte {
 	if num == 0 { // 对于 /32 这种单独的 IP
 		return byte(0)
 	}
-	return byte(rand.Intn(int(num)))
+
+	return byte(randor.Intn(int(num)))
 }
 
 type IPRanges struct {
@@ -61,7 +64,7 @@ func (r *IPRanges) fixIP(ip string) string {
 func (r *IPRanges) parseCIDR(ip string) {
 	var err error
 	if r.firstIP, r.ipNet, err = net.ParseCIDR(r.fixIP(ip)); err != nil {
-		log.Fatalln("ParseCIDR err", err)
+		log.Fatalln("ParseCIDR err 6 ", err)
 	}
 }
 
@@ -161,11 +164,15 @@ func loadIPRanges() []*net.IPAddr {
 			if line == "" || strings.HasPrefix(line, "#") {
 				continue
 			}
-			ipRanges.parseCIDR(line)
-			if isIPv4(line) {
-				ipRanges.chooseIPv4()
+			if !strings.Contains(line, "/") {
+				ipRanges.appendIP(net.ParseIP(line))
 			} else {
-				ipRanges.chooseIPv6()
+				ipRanges.parseCIDR(line)
+				if isIPv4(line) {
+					ipRanges.chooseIPv4()
+				} else {
+					ipRanges.chooseIPv6()
+				}
 			}
 		}
 	} else {
